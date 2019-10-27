@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+import getpass
+import Tkinter
+import twisted.internet.tksupport
+import opscore.actor
+import RO.Comm
+import interlocks
+
+if __name__ == "__main__":
+    root = Tkinter.Tk()
+    root.resizable(False, False)
+    root.title("Interlocks")
+    twisted.internet.tksupport.install(root)
+
+    def connectCallback(connection):
+        print connection.getFullState()[1]
+
+    connection = RO.Comm.HubConnection.HubConnection("hub25m", 9877)
+    connection.addStateCallback(connectCallback)
+    if True:
+        progID = raw_input("Program ID? ")
+        progID = progID.upper()
+        pwd = getpass.getpass("Password for program %s? " % progID)
+    else:
+        progID = "apo"; pwd = ""
+
+    connection.connect(username="interlocksDisplay", progID=progID, password=pwd)
+
+    dispatcher = opscore.actor.CmdKeyVarDispatcher(connection=connection)
+    opscore.actor.Model.setDispatcher(dispatcher)
+    mcpModel = opscore.actor.Model("mcp")
+    
+    testFrame = interlocks.InterlocksWdg(root, mcpModel)
+    testFrame.pack(fill="both", expand=True)
+
+    dispatcher.reactor.run()

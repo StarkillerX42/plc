@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# Normalise the sdss.csv
+#
+while [ X"$1" != X"" ]; do
+	case $1 in
+	 -h|--help)
+		cat <<"EOT"
+Usage: normalizeCSV [-h] file
+e.g.
+	normalizeCSV etc/sdss.csv
+
+Normalise a .csv file; specifically
+	Remove all ^Ms at ends of lines
+	Remove all "double quotes"
+	Remove trailing commas
+
+This command should always be used before checking a sdss.csv file into
+cvs as it makes "cvs diff" _much_ more useful.
+EOT
+		exit 0;;
+	 -*)
+		echo "Unknown argument: $1; try normalizeCSV -h" >&2
+		exit 1;;
+	 *)
+		break;;
+	esac
+
+	shift
+done
+
+file="$1"; shift
+if [ X"$1" != X"" ]; then
+	echo "Ignoring extra arguments: $*" >&2
+fi
+
+if [ X"$file" = X"" ]; then
+	echo "Please specify a filename" >&2
+	exit 1
+fi
+
+if [ ! -f $file ]; then
+	echo "I cannot see a file called $file" >&2
+	exit 1
+fi
+
+perl -i -p -e 's/\r//; s/\"//g; s/,+$//' $file
+

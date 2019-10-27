@@ -1,0 +1,348 @@
+/* -*- c -*-
+=============================================================================
+	data_collection.h
+=============================================================================*/
+#if defined(_DATA_COLLECTION_H_)
+#warning "DATA_COLLECTION previously defined"
+#else	/* _DATA COLLECTION_H_ */
+#define	_DATA_COLLECTION_H_
+
+#if defined(VXWORKS)
+                /* {,u}int32_t is defined in vxTypes.h */
+#else
+#  include <stdint.h>   /* for {,u}int32_t */
+#endif
+
+struct TM_M68K {
+	short prev_encoder;
+	short current_vel;
+	int32_t actual_position;
+	unsigned short time_fractional;
+	uint32_t time;
+	short jerk_fractional;
+	int32_t jerk;
+	short acceleration_fractional;
+	int32_t acceleration;
+	short velocity_fractional;
+	int32_t velocity;
+	int32_t position_fractional;
+	int32_t position;
+	short master_pos;
+	short ratio;
+	short ratio2;
+	short ratio3;
+	short ratio4;
+	short ratio5;
+	short ratio6;
+	short cv_1;
+	short error;
+	short trigger;
+	short trigger2;
+	short trigger3;
+	short trigger4;
+	short trigger5;
+	int32_t latch;
+	short unknown1;
+	short unknown2;
+	short unknown3;
+	short unknown4;
+	short unknown5;
+	short unknown6;
+	short unknown7;
+	short unknown8;
+	short voltage;
+	short unknown9;
+	short prev_encoder2;
+	short current_vel2;
+	int32_t actual_position2;
+	short status;
+	short errcnt;
+};
+struct TM {
+	short prev_encoder;
+	short current_vel;
+	short actual_position_hi;		/* ALENC1, AZENC1 (upper)	*/
+	unsigned short actual_position_lo;	/* ALENC1, AZENC1 (lower)	*/
+	unsigned short time_fractional;
+	unsigned short time_hi;
+	unsigned short time_lo;
+	short jerk_fractional;
+	short jerk_hi;
+	unsigned short jerk_lo;
+	short acceleration_fractional;
+	short acceleration_hi;
+	unsigned short acceleration_lo;
+	short velocity_fractional;
+	short velocity_hi;
+	unsigned short velocity_lo;
+	short position_fractional_hi;
+	unsigned short position_fractional_lo;
+	short position_hi;			/* AZCPOS, ALCPOS, ROCPOS (upper) */
+	unsigned short position_lo;		/* AZCPOS, ALCPOS, ROCPOS (lower) */
+	short master_pos;
+	short ratio;
+	short ratio2;
+	short ratio3;
+	short ratio4;
+	short ratio5;
+	short ratio6;
+	short cv_1;
+	short error;
+	short trigger;
+	short trigger2;
+	short trigger3;
+	short trigger4;
+	short trigger5;
+	short latch_hi;
+	unsigned short latch_lo;
+	short unknown1;
+	short unknown2;
+	short unknown3;
+	short unknown4;
+	short unknown5;
+	short unknown6;
+	short unknown7;
+	short unknown8;
+	short voltage;				/* AZCVOLT, ALCVOLT, ROCVOLT */
+	short unknown9;
+	short prev_encoder2;
+	short current_vel2;
+	short actual_position2_hi;		/* ALENC2, AZENC2 (upper)	*/
+	unsigned short actual_position2_lo;	/* ALENC2, AZENC2 (lower)	*/
+	short status;
+	short errcnt;
+};
+struct IL {
+	short strain_gage;
+	short pos;
+	short enable;
+	short status;
+};
+struct CW {
+	short pos;
+	short status;
+};
+struct PVT_M68K {
+	int32_t position;
+	int32_t velocity;
+	int32_t time;
+};
+struct PVT {
+	short position_hi;
+	unsigned short position_lo;
+	short velocity_hi;
+	unsigned short velocity_lo;
+	short time_hi;
+	unsigned short time_lo;
+};
+/*
+ * Start of machine generated code
+ */
+#include XXX			/* include machine generated code here */
+/*
+ * End of machine generated code
+ */
+struct I1 {
+#  include I1 il
+};
+struct I2 {
+	I2_L0 il0;
+	short az_lvdt_error;
+	short alt_lvdt_error;				/* ALWSPOS	*/
+	short az_primary_drv;
+	short az_feed_forward_drv;
+	short alt_primary_drv;
+	unsigned short short_undefined7;
+	uint32_t undefined4;
+	uint32_t undefined5;
+	uint32_t undefined6;
+	uint32_t undefined7;
+	uint32_t undefined8;
+	uint32_t undefined9;
+	uint32_t undefined10;
+	uint32_t undefined11;
+	uint32_t undefined12;
+	uint32_t undefined13;
+	uint32_t undefined14;
+	uint32_t undefined15;
+};
+struct I3 {
+	short az_1_voltage;					/* AZMTRV1  */
+	short az_1_current;					/* AZMTRC1  */
+	short az_2_voltage;					/* AZMTRV2  */
+	short az_2_current;					/* AZMTRC2  */
+	short alt_1_voltage;				/* ALMTRV1	*/
+	short alt_1_current;				/* ALMTRC1	*/
+	short alt_2_voltage;				/* ALMTRV2	*/
+	short alt_2_current;				/* ALMTRC2	*/
+};
+struct I4 {
+	short alt_position;
+	short rot_1_voltage;				/* ROMTRV	*/
+	short rot_1_current;				/* ROMTRC	*/
+	short umbilical_dist;
+	short inst_lift_force;
+	short inst_lift_dist;
+	short i_4_analog_6_spare;
+	short i_4_analog_7_spare;
+};
+struct I5 {
+	short counterweight_1_pos;
+	short counterweight_2_pos;			/* ROMTRV	*/
+	short counterweight_3_pos;			/* ROMTRC	*/
+	short counterweight_4_pos;
+	short i_5_analog_4_spare;
+	short i_5_analog_5_spare;
+	short i_5_analog_6_spare;
+	short i_5_analog_7_spare;
+};
+
+struct I6 {
+#  include I6 il
+};
+
+struct I7 {
+#  include I7 il
+};
+
+struct I8 {
+#  include I8 il
+};
+
+struct I9 {
+#  include I9 il
+};
+
+struct I10 {
+#  include I10 il
+};
+
+struct O1 {
+#  include O1 ol
+};
+
+struct O2 {
+	O2_L0 ol0;
+	uint32_t undefined1;
+	uint32_t undefined2;
+	uint32_t undefined3;
+	uint32_t undefined4;
+	uint32_t undefined5;
+	uint32_t undefined6;
+	uint32_t undefined7;
+	uint32_t undefined8;
+	uint32_t undefined9;
+	uint32_t undefined10;
+	uint32_t undefined11;
+	uint32_t undefined12;
+	uint32_t undefined13;
+	uint32_t undefined14;
+	uint32_t undefined15;
+};
+
+struct O11 {
+#  include O11 ol
+};
+
+struct O12 {
+#  include O12 ol
+};
+
+struct B3 {
+#  include B3 w
+};
+
+struct B10 {
+#  include B10 w
+};
+
+struct AB_SLC500 {
+	short status;
+	short errcnt;
+	struct I1 i1;
+	struct O1 o1;
+	struct I2 i2;
+	struct O2 o2;
+	struct I3 i3;
+	struct I4 i4;
+	struct I5 i5;
+	struct I6 i6;
+	struct I7 i7;
+	struct I8 i8;
+	struct I9 i9;
+	struct I10 i10;
+	struct O11 o11;
+	struct O12 o12;
+	struct B3 b3;
+	struct B10 b10;
+};
+
+struct SDSS_FRAME {
+	unsigned char vers;
+#define SDSS_FRAME_VERSION	11
+	unsigned char type;
+#define DATA_TYPE	1
+	unsigned short CRC;		/* CRC for sdssdc */
+	uint32_t ctime;
+	struct TM axis[3];
+	struct IL inst;
+	struct CW weight[4];
+	struct AB_SLC500 status;
+	struct PVT_M68K tccmove[3];	/* AZTCCPOS, ALTCCPOS, ROTCCPOS,
+					   AZTCCVEL, ALTCCVEL, ROTCCVEL,
+					   AZTCCTIM, ALTCCTIM, ROTCCTIM */
+	struct PVT_M68K tccpmove[3];
+	struct PVT_M68K pvt[3];		/* AZMCPPOS, ALMCPPOS, ROMCPPOS,
+					   AZMCPVEL, ALMCPVEL, ROMCPVEL,
+					   AZMCPTIM, ALMCPTIM, ROMCPTIM */
+	uint32_t axis_state[3];	/* AZSTATE, ALSTATE, ROSTATE */
+	uint32_t sdsstime;
+	uint32_t ascii_len;
+#define ASCII_LEN	80
+	unsigned char ascii[ASCII_LEN];
+};
+
+#define STATUS_MASK 0x00000700		/* mask of bits not to pass to TCC */
+
+struct AXIS_STAT {
+	unsigned always_zero : 1;
+	unsigned bump_up_ccw_sticky : 1;
+	unsigned bump_dn_cw_sticky : 1;
+	unsigned  : 4;
+	unsigned ms_on_correction_too_large : 1;
+
+	unsigned  : 5;
+        unsigned clock_not_set : 1;
+	unsigned clock_slow_signal : 1;
+	unsigned clock_loss_signal : 1;
+
+        unsigned : 1;
+	unsigned semCmdPort_taken : 1;
+	unsigned stop_in : 1;
+	unsigned amp_bad : 1;
+	unsigned out_closed_loop : 1;
+	unsigned stop_ok : 1;
+	unsigned amp_ok : 1;
+	unsigned closed_loop : 1;
+
+	unsigned max_limit: 1;
+	unsigned min_limit: 1;
+	unsigned max_acc: 1;
+	unsigned max_vel: 1;
+	unsigned max_pos: 1;
+	unsigned min_pos: 1;
+	unsigned pvt_time_late : 1;
+	unsigned pvt_empty : 1;
+};
+
+/*
+ * Global variables
+ */
+extern struct SDSS_FRAME sdssdc;
+extern struct TM_M68K *tmaxis[];
+extern int rawtick;
+extern struct TM_M68K *tmaxis[];
+#if defined(__INCsemLibh)
+   extern SEM_ID semSLCDC;
+#endif
+#endif	/* _DATA_COLLECTION_H_ */

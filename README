@@ -1,0 +1,9 @@
+This product contains the Rockwell RSLogix 500 processor code for programming
+the PLC interlock system on the SDSS 2.5 meter telescope.
+
+It also includes support for visualising the interlocks system logic
+
+To tag a new version of it, use the releaseNewVersion.py script, which
+will check that all appropriate files are built and checked in.
+
+See French Leger, Dan Long, or John Parejko for more information.

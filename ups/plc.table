@@ -1,0 +1,4 @@
+pathAppend(PATH, ${UPS_PROD_DIR}/bin)
+pathPrepend(PYTHONPATH, ${UPS_PROD_DIR}/python)
+
+setupOptional(sdsstools)

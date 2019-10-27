@@ -1,0 +1,430 @@
+#!/usr/bin/env perl
+# -*- perl -*-
+#
+# Read a .csv file describing the interlock bits and generate either the
+# tcl code to initialise the interlocks help strings, or the C bitfield
+# definitions for data_collection.h.
+#
+#  E.g.
+#	read-csv -d interlockDescriptions sdss.csv > documentation.tcl
+#	read-csv -C -s data_collection.h.skl $(eups list plc -c -d)/etc/sdss.csv > data_collection.h
+#
+require "getopts.pl";
+
+if(!&Getopts('h?Cd:Dp:s:tv')) {
+   &syntax;
+   exit 1;
+}
+
+if($opt_h) {
+   &syntax;
+   exit 1;
+}
+if($opt_C) {
+   $C_code = 1;
+}
+if($opt_d) {
+   $tcl_descrip_code = 1;
+   $arrname = $opt_d;
+}
+if($opt_D) {
+   $mcp_dictionary = 1;
+}
+if($opt_p) {
+   $tcl_proc_code = 1;
+   $arrname = $opt_p;
+}
+if($opt_s) {
+   $skel_file = $opt_s;
+
+   open(SKEL, "$skel_file") || die "I Cannot open file \"$skel_file\"\n";
+} else {
+   $skel_file = "";
+}
+if($opt_t) {
+   $tpm_dump_code = 1;
+}
+if($opt_v) {
+   $verbose = 1;
+}
+#
+# Read file
+#
+$cvsName = getName();
+foreach $file (@ARGV) {
+   open(FD, $file) or die "Unable to open $file\n";
+   
+   while(<FD>) {
+      s/\s+$//;
+      $line = $_;
+
+      $line =~ s|\$Name[^\$]*\$|\$Name: $cvsName \$|;
+      
+      ($what, $scope, $name, $d1, $d2, $d3, $d4, $d5) = split(/,/, $line);
+      if($name eq "") {
+	 next;
+      }
+      if($scope != 0) {
+	 warn "Expected global scope (\"0\") but saw $scope for $name\n"
+	  }
+
+      $name =~ tr/A-Z/a-z/;
+      
+      $descrip = "";
+      foreach $d ($d1, $d2, $d3, $d4, $d5) {
+	 $d =~ s/"//g;		# "
+	 if($d ne "") {
+	    if($descrip) {
+	       $descrip .= " $d";
+	    } else {
+	       $descrip .= "$d";
+	    }
+	 }
+      }
+
+
+      push @names, $name;
+      $descrips{$name} = $descrip;
+      $whats{$name} = $what;
+
+      if($tcl_proc_code || $C_code || $tpm_dump_code || $mcp_dictionary) {
+	 $_ = $what;
+
+	 if(/^([FNSTU]|PFILE)/) {
+	    next;
+	 } elsif(m#^(B[0-9]+):([0-9]+)(/([0-9]+))?#) {
+		 $struct = $1; $word = $2; $bit = $4;
+	      } elsif(m#^([IO]):([0-9]+)\.([0-9]+)(/([0-9]+))?#) {
+		      $struct = "$1$2"; $word = $3; $bit = $5;
+		   } else {
+		      die "$line";
+		   }
+
+	 $structs{$name} = $struct;
+	 $words{$name} = $word;
+	 if($bit ne "") {
+	    $bits{"$struct:$word:$name"} = $bit;
+	 }
+      }
+   }
+   close FD;
+}
+#
+# Generate requested output
+#
+if($skel_file) {
+   &copy_skel();
+}
+
+if($C_code || $tpm_dump_code || $tcl_proc_code || $mcp_dictionary) {
+   #
+   # Find the entries that are just documention of bit field words
+   #
+   foreach $name (@names) {
+      $what = $whats{$name};
+      if($what !~ /^[BIO]/) {
+	 next;
+      }
+
+      $struct = $structs{$name};
+      $word = $words{$name};
+      $bit = $bits{"$struct:$word:$name"};
+
+      if($bit eq "") {
+	 #
+	 # Is this a name for a word that also has individual bits named?
+	 # Look for input lines that define bits within this word; if there
+	 # are any it's a name for the entire word and we discard it
+	 #
+	 # We save the results of the, rather slow, grep in bitfield_and_word
+	 #
+	 if(!(exists $bitfield_and_word{"$struct:$word"})) {
+	    $bitfield_and_word{"$struct:$word"} =
+		grep(/$struct:$word:/, keys(%bits));
+	 }
+
+	 if($bitfield_and_word{"$struct:$word"}) {
+	    if($verbose) {
+	       warn "$struct:$word $name is a bitfield description field\n";
+	    }
+	    next;
+	 }
+      }
+      #
+      # Generate C structs/unions/bitfields
+      #
+      if($bit eq "") {
+	 $bit = 15;
+	 $nbit = 16;
+      } else {
+	 $nbit = 1;
+      }
+
+      $high_word = $word%2 ? 1 : 0;
+      $lword = ($word - $high_word)/2;
+      $offset = 16*(1 - $high_word) + $bit;
+      
+      $ostructs{"${struct}_L${lword}"}++;
+      eval "\$${struct}_L${lword}{$offset} = '$name:$nbit';";
+   }
+   #
+   # OK! finally generate the desired code
+   #
+   if($C_code) {
+      foreach $os (sort by_struct_name keys %ostructs) {
+	 #warn "$os\n"; next;
+	 print "typedef struct {\n";
+	 $ok = 32;		# old value of k; i.e. previous bit written
+	 foreach $k (sort by_num_backwards (keys %$os)) {
+	    if($k != $ok - 1) {
+	       $nbit = $ok - $k - 1; # number of missing bits
+	       
+	       &print_line("", $nbit, "");
+	    }
+	    
+	    ($name, $nbit) = split(/:/, $$os{$k});
+	    &print_line($name, $nbit, $descrips{$name});
+	    
+	    $ok = $k - $nbit + 1;
+	 }
+	 if($ok != 0) {
+	    $name = ($ok == 32) ? "spare" : "";
+	    &print_line($name, $ok, "");
+	 }
+	 print "} $os;\n\n";
+      }
+      print "\
+/*
+ * Version from PLC
+ */
+#if defined(DATA_COLLECTION_C)
+   static char plcVersion[] = \"$plc_version\";
+#endif
+";
+   } elsif($tpm_dump_code) {
+      print "array set tpm_dmp_bits [list \\\n";
+      foreach $os (sort by_struct_name keys %ostructs) {
+	 #print "$os\n"; next;
+
+	 if($os =~ /^([BIO][0-9]+)_L([0-9]+)/) {
+	    $In = $1; $Ln = $2;
+	 } else {
+	    next;
+	 }
+
+	 $ok = 32;		# old value of k; i.e. previous bit written
+	 foreach $k (sort by_num_backwards (keys %$os)) {
+	    ($name, $nbit) = split(/:/, $$os{$k});
+	    if($nbit == 1) {	# only handle bit fields
+	       printf "   %-40s \"tpm_AB${In}_%02d %d\" \\\n", $name,
+	       (($ok - 1 >= 16) ? 2*$Ln : 2*$Ln + 1), ($k % 16);
+	    }
+	    
+	    $ok = $k - $nbit + 1;
+	 }
+      }
+      print "]\n";
+   } elsif($tcl_proc_code) {	# TCL code to define a set of procs
+      foreach $os (sort by_struct_name keys %ostructs) {
+	 #print "$os\n"; next;
+
+	 if($os =~ /^([BIO][0-9]+)_L([0-9]+)/) {
+	    $In = $1; $Ln = $2;
+	 } else {
+	    next;
+	 }
+
+	 print "\
+proc set_$os {val} {
+   global mcpData\n\n";
+
+	 $ok = 32;		# old value of k; i.e. previous bit written
+	 foreach $k (sort by_num_backwards (keys %$os)) {
+	    ($name, $nbit) = split(/:/, $$os{$k});
+	    if($nbit == 1) {	# only handle bit fields
+	       printf "   set %s(%s) [expr (\$val & (1 << %d)) != 0]\n", $arrname, $name, $k;
+	    }
+	    
+	    $ok = $k - $nbit + 1;
+	 }
+
+	 print "}\n\n";
+      }
+   } elsif($mcp_dictionary) {
+      foreach $os (sort by_struct_name keys %ostructs) {
+	 #print "$os\n"; next;
+
+	 if($os =~ /^([BIO][0-9]+)_L([0-9]+)/) {
+	    $In = $1; $Ln = $2;
+	 } else {
+	    next;
+	 }
+
+	 $wrote_header = 0;
+	 #
+	 # N.b. not backwards; https://trac.sdss3.org/wiki/Ops/Types#BitfieldValueType --- #826
+	 #
+	 foreach $k (sort by_num (keys %$os)) {
+	    ($name, $nbit) = split(/:/, $$os{$k});
+	    if($nbit == 1) {
+	       if (!$wrote_header) {
+		  printf "    Key('ab_%s', Bits(", $os;
+		  $wrote_header = 1;
+	       }
+	       
+	       printf "'$name', ";
+	    }
+	 }
+
+	 if ($wrote_header) {
+	    print "), help=''),\n";
+	 }
+      }
+   } else {
+      die;
+   }
+} elsif($tcl_descrip_code) {	# TCL code to initialise an array
+   print "array set $arrname [list \\\n";
+
+   foreach $name (@names) {
+      print "   $name {$descrips{$name}} \\\n";
+   }
+
+   print "]\n";
+} else {			# simple ascii dump
+   foreach $name (@names) {
+      print "$whats{$name}|$name|$descrips{$name}\n";
+   }
+}
+
+
+if($skel_file) {
+   &copy_skel();
+
+   close(SKEL);
+}
+
+###############################################################################
+#
+# Copy a skeleton file to stdout, stopping at the first include XXX line
+#
+# Handle "include type prefix" lines, which want to be replaced with
+# all the known types starting "type"
+#
+sub copy_skel
+{
+   local($type, $prefix, $name, $i);
+   
+   while(<SKEL>) {
+      if(/^\s*#?\s*include\s+XXX/) {
+	 return;
+      }
+      if(/^\s*#?\s*include\s+(\S+)\s+(\S+)/) {
+	 $type = $1; $prefix = $2;
+
+	 if ($type =~ /^</) {
+	    print; next;
+	 }
+
+	 $i = 0;
+	 foreach $name (sort by_struct_name keys %ostructs) {
+	    if($name =~ /${type}_/) {
+	       print "   $name ${prefix}$i;\n"; $i++;
+	    }
+	 }
+         next;
+      }
+      
+      print;
+   }
+}
+
+###############################################################################
+
+sub by_num
+{
+   return $a <=> $b;
+}
+
+sub by_num_backwards
+{
+   return $b <=> $a;
+}
+
+sub by_struct_name
+{
+   local($a0, $a1, $a2, $b0, $b1, $b2);
+   $a =~ /^(.)([0-9]+)_.([0-9]+)/; $a1 = $1; $a2 = $2; $a3 = $3;
+   $b =~ /^(.)([0-9]+)_.([0-9]+)/; $b1 = $1; $b2 = $2; $b3 = $3;
+
+   if(($a1 cmp $b1) != 0) {
+      return $a1 cmp $b1;
+   } else {
+      if(($a2 <=> $b2) != 0) {
+	 return $a2 <=> $b2;
+      } else {
+	 return $a3 <=> $b3;
+      }
+   }
+}
+
+sub print_line {
+   local($name, $width, $descrip) = @_;
+   if($name ne "") { $name .= " "; }
+   printf "%-45s", "   unsigned $name: $width;";
+   if($descrip) {
+      #
+      # Don't put the PLC version string into data_collection.h as a
+      # Dollar Name ... Dollar as that'll be substituted by the
+      # watcher/MCP version name.  Including the PLC version string
+      # will lead to a mcp/watcher/iop rebuild for every PLC change,
+      # but that's probably OK.
+      #
+      if($descrip =~ /Version ([0-9]+)/) {
+	 $descrip =~ s/Version ([0-9]+) +\$Name([^\$]*)\$/Version \1 \2/;
+	 ($plc_version = $descrip) =~ s/\s*$//;
+      }
+
+      print " /* $descrip */";
+   }
+   print "\n";
+}
+
+#
+# Return the tag that would be in $Name$ but is actually in $HeadURL: https://svn.sdss.org/repo/operations/apo/plc/trunk/bin/read-csv $
+#
+sub getName
+{
+   $HeadURL = q($HeadURL: https://svn.sdss.org/repo/operations/apo/plc/trunk/bin/read-csv $);
+   ($Name = $HeadURL) =~ s|^.*/apo/plc/tags/([^/]+).*|\1|;
+   if ($Name eq $HeadURL) {	# regexp failed
+      $Name = "NOTAG";
+   }
+
+   return $Name;
+}
+
+sub syntax
+{
+      print <<"EOT";
+Extract documentation and/or bit offsets from a .csv file, as produced
+from the PLC by John Anderson
+Usage:
+    read-csv [options] file
+Options:
+    -h		Print this message
+    -C          Generate code to initialise C bitfields with the
+		offset/name/description information in the file
+    -d name     Generate code to initialise the TCL array <name> with the
+		name/description pairs in the file
+    -D          Generate dictionary for mcp
+    -p name     Generate a set of procs to initialise the TCL array <name> from
+		the bitfields in the file
+    -s file     Use <file> as a skeleton and include it in the output.
+	        Any code generated by -C/-d/-t/T will appear in place of a line
+		    #include XXX
+		(the # is optional; the XXX must be literally present)
+    -t          Generate code to make sense of a TMP dump of the Allen Bradley
+    -v		Be chatty
+EOT
+}
