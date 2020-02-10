@@ -19,7 +19,7 @@ History:
 """
 import os
 import time
-import Tkinter
+import tkinter
 import opscore.protocols
 import plc
 from pathlib import Path
@@ -27,7 +27,7 @@ from pathlib import Path
 __all__ = ["InterlocksWdg"]
 
 
-class InterlocksWdg(Tkinter.Frame):
+class InterlocksWdg(tkinter.Frame):
     def __init__(self, master, mcpModel):
         """A wrapper around the tcl/tk code.
         
@@ -35,7 +35,7 @@ class InterlocksWdg(Tkinter.Frame):
         - master: master widget
         - mcpModel: the MCP model
         """
-        Tkinter.Frame.__init__(self, master)
+        tkinter.Frame.__init__(self, master)
         
         # the following are required to find the plc and interlocks tcl code in
         # a bundled application they will have no effect when running from
@@ -61,7 +61,7 @@ class InterlocksWdg(Tkinter.Frame):
         if not plc_etc_dir.exists():
             plc_etc_dir = plc_root_dir / 'plc/etc/'
             if not plc_etc_dir.exists():
-                print(plc_root_dir.exists(), plc_etc_dir.exists())
+                print((plc_root_dir.exists(), plc_etc_dir.exists()))
                 raise Exception('Could not resolve plc/etc path,'
                                 ' tried {}'.format(plc_etc_dir))
         interlocksRootDir = plc_etc_dir
@@ -73,14 +73,14 @@ class InterlocksWdg(Tkinter.Frame):
             self.tk.call('source', plc_etc_dir)
    
         # Define callbacks for all KeyVar's beginning "ab_"
-        for keyVar in mcpModel.keyVarDict.values():
+        for keyVar in list(mcpModel.keyVarDict.values()):
             if keyVar.name.startswith("ab_") and keyVar.name != "ab_status":
                 self.addTclCallback(keyVar)
 
                 # Tell the displays that this bit will (eventually) appear
                 t = keyVar.key.typedValues.vtypes[0]
                 if isinstance(t, opscore.protocols.types.Bits):
-                    for k in t.bitFields.keys():
+                    for k in list(t.bitFields.keys()):
                         self.addDataName(k)
 
         mcpModel.ab_status.addCallback(self.ab_statusCallback, callNow=False)
@@ -166,16 +166,16 @@ if __name__ == "__main__":
     import opscore.actor
     import RO.Comm
 
-    root = Tkinter.Tk()
+    root = tkinter.Tk()
     root.resizable(False, False)
     twisted.internet.tksupport.install(root)
 
     def connectCallback(connection):
-        print connection.getFullState()[1]
+        print(connection.getFullState()[1])
 
     connection = RO.Comm.HubConnection.HubConnection("hub25m", 9877)
     connection.addStateCallback(connectCallback)
-    progID = raw_input("Program ID? ")
+    progID = input("Program ID? ")
     progID = progID.upper()
     pwd = getpass.getpass("Password for program %s? " % progID)
     connection.connect(username="interlocksDisplay", progID=progID, password=pwd)
